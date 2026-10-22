@@ -1,0 +1,726 @@
+<title>JavaFX MVC Form Lab</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: a single reading column with a sticky step index on wide screens; code panels scroll on their own. */
+:root {
+  --bg: #f6f8f9;
+  --surface: #ffffff;
+  --fg: #17232b;
+  --muted: #56656f;
+  --line: #d9e1e5;
+  --accent: #0b6e8a;
+  --accent-soft: #e2f1f5;
+  --model: #6a4bb3;
+  --view: #0b7a52;
+  --ctrl: #b4570b;
+  --code-bg: #0f1c24;
+  --code-fg: #d8e6ec;
+  --bad: #b3261e;
+  --font-display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --font-body: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", Consolas, "Courier New", monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0e171c; --surface: #15222a; --fg: #e3ecf0; --muted: #98a9b3; --line: #26363f;
+    --accent: #5cc3dd; --accent-soft: #15333d; --model: #b39cf0; --view: #5fd3a4; --ctrl: #f0a15e;
+    --code-bg: #091116; --code-fg: #d8e6ec; --bad: #ff8a80; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0e171c; --surface: #15222a; --fg: #e3ecf0; --muted: #98a9b3; --line: #26363f;
+  --accent: #5cc3dd; --accent-soft: #15333d; --model: #b39cf0; --view: #5fd3a4; --ctrl: #f0a15e;
+  --code-bg: #091116; --code-fg: #d8e6ec; --bad: #ff8a80; color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+body {
+  background: var(--bg); color: var(--fg);
+  font-family: var(--font-body); font-size: 16px; line-height: 1.6;
+}
+.wrap {
+  max-width: 1120px; margin: 0 auto;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 40px 80px;
+}
+.layout { display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 48px; }
+@media (max-width: 860px) { .layout { grid-template-columns: minmax(0, 1fr); } nav.toc { display: none; } }
+
+header.top { display: grid; gap: 12px; margin-bottom: 40px; max-width: 760px; }
+.eyebrow { font-size: 12px; letter-spacing: .12em; text-transform: uppercase; color: var(--accent); font-weight: 600; }
+h1 { font-family: var(--font-display); font-weight: 800; font-size: clamp(32px, 5vw, 48px); line-height: 1.05; margin: 0; text-wrap: balance; }
+.lede { color: var(--muted); font-size: 18px; margin: 0; max-width: 65ch; }
+
+nav.toc { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 24px); align-self: start; font-size: 14px; }
+nav.toc ol { list-style: none; padding: 0; margin: 0; display: grid; gap: 2px; }
+nav.toc a { display: block; padding: 6px 10px; border-radius: 6px; color: var(--muted); text-decoration: none; }
+nav.toc a:hover, nav.toc a:focus-visible { background: var(--accent-soft); color: var(--fg); outline: none; }
+nav.toc .n { font-family: var(--font-mono); color: var(--accent); margin-right: 6px; }
+
+main { display: grid; gap: 56px; min-width: 0; }
+section { display: grid; gap: 16px; min-width: 0; scroll-margin-top: 24px; }
+h2 { font-family: var(--font-display); font-weight: 600; font-size: 28px; line-height: 1.2; margin: 0; text-wrap: balance; display: flex; gap: 12px; align-items: baseline; }
+h2 .n { font-family: var(--font-mono); font-size: 15px; font-weight: 500; color: var(--accent); }
+h3 { font-size: 17px; margin: 8px 0 0; }
+p, li { max-width: 68ch; }
+p { margin: 0; }
+ul, ol { margin: 0; padding-left: 22px; display: grid; gap: 6px; }
+a { color: var(--accent); }
+code { font-family: var(--font-mono); font-size: .9em; background: var(--accent-soft); padding: 1px 5px; border-radius: 4px; overflow-wrap: anywhere; }
+kbd { font-family: var(--font-mono); font-size: .85em; border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 4px; padding: 0 5px; background: var(--surface); }
+.path { font-family: var(--font-mono); font-size: 14px; }
+
+.note { border-left: 3px solid var(--accent); background: var(--accent-soft); padding: 12px 16px; border-radius: 0 8px 8px 0; max-width: 68ch; }
+.note.warn { border-color: var(--ctrl); }
+.note strong { display: block; margin-bottom: 2px; }
+
+/* MVC flow */
+.mvc { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+@media (max-width: 640px) { .mvc { grid-template-columns: minmax(0, 1fr); } }
+.part { background: var(--surface); border: 1px solid var(--line); border-top: 4px solid var(--c); border-radius: 8px; padding: 14px 16px; display: grid; gap: 6px; align-content: start; min-width: 0; }
+.part .tag { font-size: 12px; letter-spacing: .1em; text-transform: uppercase; font-weight: 600; color: var(--c); }
+.part .files { font-family: var(--font-mono); font-size: 13px; color: var(--muted); overflow-wrap: anywhere; }
+.part p { font-size: 15px; }
+.flow { counter-reset: f; list-style: none; padding: 0; display: grid; gap: 8px; }
+.flow li { counter-increment: f; display: grid; grid-template-columns: 28px minmax(0, 1fr); gap: 10px; align-items: start; }
+.flow li::before { content: counter(f); font-family: var(--font-mono); font-size: 13px; width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center; background: var(--accent-soft); color: var(--accent); margin-top: 2px; }
+
+/* Code */
+.code { position: relative; background: var(--code-bg); color: var(--code-fg); border-radius: 8px; min-width: 0; }
+.code .bar { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 8px 12px; border-bottom: 1px solid rgba(255,255,255,.08); font-family: var(--font-mono); font-size: 12.5px; color: #8fa6b2; }
+.code pre { margin: 0; padding: 14px 16px; overflow-x: auto; font-family: var(--font-mono); font-size: 13.5px; line-height: 1.55; tab-size: 4; }
+.copy { font: inherit; font-size: 12px; color: #cfe3ea; background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.14); border-radius: 5px; padding: 3px 10px; cursor: pointer; }
+.copy:hover { background: rgba(255,255,255,.16); }
+.copy:focus-visible { outline: 2px solid #5cc3dd; outline-offset: 2px; }
+.c-com { color: #7f98a5; font-style: italic; }
+.c-key { color: #8fd0ff; }
+
+details { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; min-width: 0; }
+details > summary { cursor: pointer; padding: 12px 16px; font-weight: 600; list-style-position: inside; }
+details > summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 8px; }
+details > summary .path { font-weight: 400; color: var(--muted); margin-left: 6px; }
+details > .inner { padding: 0 12px 12px; display: grid; gap: 10px; }
+details > .inner > p { padding: 0 4px; font-size: 15px; color: var(--muted); }
+
+/* Tables */
+.tbl { overflow-x: auto; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: 15px; }
+th, td { text-align: left; padding: 10px 14px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+tr:last-child td { border-bottom: 0; }
+td code { white-space: nowrap; }
+.ok { color: var(--view); font-weight: 600; }
+.no { color: var(--bad); font-weight: 600; }
+
+/* Setup checklist */
+.check { list-style: none; padding: 0; display: grid; gap: 10px; }
+.check li { display: grid; grid-template-columns: 22px minmax(0, 1fr); gap: 10px; align-items: start; }
+.check input { width: 18px; height: 18px; margin-top: 3px; accent-color: var(--accent); }
+.check label { cursor: pointer; }
+
+footer { color: var(--muted); font-size: 14px; border-top: 1px solid var(--line); padding-top: 20px; }
+@media (prefers-reduced-motion: no-preference) { html { scroll-behavior: smooth; } }
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <div class="eyebrow">INFO 5100 · Lab 5 · Study guide</div>
+    <h1>Build a JavaFX user form with MVC</h1>
+    <p class="lede">A walkthrough for building the Lab 5 app in Apache NetBeans: a form with Name, Age and Email, input validation, and a pop-up showing the details, organised as Model, View and Controller.</p>
+  </header>
+
+  <div class="layout">
+    <nav class="toc" aria-label="Steps">
+      <ol>
+        <li><a href="#task"><span class="n">00</span>The task</a></li>
+        <li><a href="#setup"><span class="n">01</span>Install the tools</a></li>
+        <li><a href="#mvc"><span class="n">02</span>What MVC means</a></li>
+        <li><a href="#project"><span class="n">03</span>Create the project</a></li>
+        <li><a href="#model"><span class="n">04</span>Write the Model</a></li>
+        <li><a href="#view"><span class="n">05</span>Design the View</a></li>
+        <li><a href="#controller"><span class="n">06</span>Write the Controller</a></li>
+        <li><a href="#main"><span class="n">07</span>Start the app</a></li>
+        <li><a href="#run"><span class="n">08</span>Configure and run</a></li>
+        <li><a href="#test"><span class="n">09</span>Test the validation</a></li>
+        <li><a href="#errors"><span class="n">10</span>Common errors</a></li>
+        <li><a href="#practice"><span class="n">11</span>Practice</a></li>
+      </ol>
+    </nav>
+
+    <main>
+      <section id="task">
+        <h2><span class="n">00</span>The task</h2>
+        <ul>
+          <li>A simple JavaFX application with <strong>Name</strong>, <strong>Age</strong>, <strong>Email</strong> and a <strong>Submit</strong> button.</li>
+          <li>On Submit, a pop-up shows the details entered.</li>
+          <li>Validate the input as much as possible.</li>
+          <li>Follow the Model View Controller (MVC) architecture.</li>
+        </ul>
+      </section>
+
+      <section id="setup">
+        <h2><span class="n">01</span>Install the tools</h2>
+        <p>Do this once per computer. Tick each item off as you go.</p>
+        <ul class="check">
+          <li><input type="checkbox" id="s1"><label for="s1"><strong>JDK 24 or newer.</strong> Check by running <code>java -version</code> in a terminal.</label></li>
+          <li><input type="checkbox" id="s2"><label for="s2"><strong>Apache NetBeans</strong> (this guide used version 31). It already includes JavaFX and Scene Builder support.</label></li>
+          <li><input type="checkbox" id="s3"><label for="s3"><strong>JavaFX SDK</strong> from <a href="https://gluonhq.com/products/javafx/">gluonhq.com/products/javafx</a>. Download the Windows x64 <em>SDK</em> zip and unzip it somewhere permanent, for example <span class="path">C:\Users\&lt;you&gt;\Java\</span>. The folder you need later is the <code>lib</code> folder inside <code>javafx-sdk-27</code>. Leave <code>src.zip</code> zipped; you don't need it.</label></li>
+          <li><input type="checkbox" id="s4"><label for="s4"><strong>Scene Builder</strong> from <a href="https://gluonhq.com/products/scene-builder/">gluonhq.com/products/scene-builder</a>. Download the Windows Installer (<code>.msi</code>), run it, and keep the default location, <span class="path">C:\Users\&lt;you&gt;\AppData\Local\SceneBuilder</span>.</label></li>
+          <li><input type="checkbox" id="s5"><label for="s5"><strong>Connect Scene Builder to NetBeans.</strong> Open <em>Tools › Options › Java › JavaFX</em>, click <em>Activate</em> if it appears, set <em>Scene Builder Home</em> to the Scene Builder folder, and click OK.</label></li>
+        </ul>
+        <div class="note"><strong>Why download JavaFX separately?</strong>Since Java 11, JavaFX isn't part of the JDK. You give Java its location in two places: when compiling (Libraries) and when running (VM Options). Step 08 covers both.</div>
+      </section>
+
+      <section id="mvc">
+        <h2><span class="n">02</span>What MVC means</h2>
+        <p>MVC splits the app into three jobs, and each job lives in its own package. No part does another part's job.</p>
+        <div class="mvc">
+          <div class="part" style="--c: var(--model)">
+            <span class="tag">Model</span>
+            <span class="files">model/User.java<br>model/UserValidator.java</span>
+            <p>The data and the rules. It knows nothing about windows or buttons, so it can be tested on its own.</p>
+          </div>
+          <div class="part" style="--c: var(--view)">
+            <span class="tag">View</span>
+            <span class="files">view/UserForm.fxml<br>view/style.css</span>
+            <p>What the screen looks like. You build it in Scene Builder. It contains no logic.</p>
+          </div>
+          <div class="part" style="--c: var(--ctrl)">
+            <span class="tag">Controller</span>
+            <span class="files">controller/UserFormController.java</span>
+            <p>The go-between. It reacts to clicks, reads the View, asks the Model, and updates the View.</p>
+          </div>
+        </div>
+        <h3>What happens when you click Submit</h3>
+        <ol class="flow">
+          <li>The button in the FXML has <code>onAction="#handleSubmit"</code>, so JavaFX calls <code>handleSubmit()</code> in the Controller.</li>
+          <li>The Controller reads the three text fields. They are linked because each <code>@FXML</code> field name matches an <code>fx:id</code> in the FXML.</li>
+          <li>The Controller asks <code>UserValidator</code> (Model) whether each value is valid.</li>
+          <li>If something is wrong, the field turns red, its message appears under it, and an error pop-up lists every problem.</li>
+          <li>If everything is valid, the Controller creates a <code>User</code> (Model) and shows its details in an <code>Alert</code> pop-up. The form then clears.</li>
+        </ol>
+      </section>
+
+      <section id="project">
+        <h2><span class="n">03</span>Create the project</h2>
+        <ol>
+          <li><em>File › New Project › Java with Ant › Java Application</em>. Click Next.</li>
+          <li>Name it <code>Lab5</code>, <strong>untick</strong> "Create Main Class", and click Finish.</li>
+          <li>Right-click <em>Source Packages › New › Java Package</em> and create four packages: <code>model</code>, <code>view</code>, <code>controller</code>, <code>app</code>.</li>
+        </ol>
+        <div class="note"><strong>Package names matter</strong>Each Java file starts with <code>package model;</code> (or <code>view</code>, <code>controller</code>, <code>app</code>). It must match the folder the file is in, otherwise NetBeans shows a red error on the first line.</div>
+      </section>
+
+      <section id="model">
+        <h2><span class="n">04</span>Write the Model</h2>
+        <p>Start with the Model because it has no dependencies. Right-click <code>model › New › Java Class</code> for each file.</p>
+        <p><strong>User</strong> is a plain class that carries the three values. <strong>UserValidator</strong> holds the rules. Each method returns an error message, or <code>null</code> when the value is fine. Keeping the rules here and not in the Controller is what makes the design true MVC.</p>
+
+        <details open>
+          <summary>User.java <span class="path">src/model/</span></summary>
+          <div class="inner">
+<div class="code"><div class="bar"><span>User.java</span><button class="copy" type="button">Copy</button></div><pre><code>package model;
+
+/**
+ * MODEL: holds the data for one user.
+ * It knows nothing about JavaFX, buttons or text fields.
+ */
+public class User {
+
+    private final String name;
+    private final int age;
+    private final String email;
+
+    public User(String name, int age, String email) {
+        this.name = name;
+        this.age = age;
+        this.email = email;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public int getAge() {
+        return age;
+    }
+
+    public String getEmail() {
+        return email;
+    }
+
+    @Override
+    public String toString() {
+        return "Name:  " + name + "\n"
+             + "Age:   " + age + "\n"
+             + "Email: " + email;
+    }
+}</code></pre></div>
+          </div>
+        </details>
+
+        <details>
+          <summary>UserValidator.java <span class="path">src/model/</span></summary>
+          <div class="inner">
+            <p>The rules: Name 2–50 letters (spaces, hyphens, apostrophes and dots allowed); Age a whole number from 1 to 120; Email in the form name@domain.com with no spaces or "..".</p>
+<div class="code"><div class="bar"><span>UserValidator.java</span><button class="copy" type="button">Copy</button></div><pre><code>package model;
+
+import java.util.regex.Pattern;
+
+/**
+ * MODEL: the business rules for what counts as valid input.
+ * Each method returns an error message, or null when the value is valid.
+ * Keeping the rules here (not in the controller) means they can be
+ * reused or tested without any user interface.
+ */
+public class UserValidator {
+
+    // Letters (any language), spaces, apostrophes, hyphens and dots, e.g. "Mary-Jane O'Neil Jr."
+    private static final Pattern NAME_PATTERN = Pattern.compile("^[\\p{L}][\\p{L} .'-]*$");
+
+    // something@domain.tld, no spaces, at least one dot in the domain, 2+ letter ending
+    private static final Pattern EMAIL_PATTERN =
+            Pattern.compile("^[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+(\\.[A-Za-z0-9-]+)*\\.[A-Za-z]{2,}$");
+
+    public static final int MIN_AGE = 1;
+    public static final int MAX_AGE = 120;
+
+    public static String validateName(String name) {
+        if (name == null || name.isBlank()) {
+            return "Name is required.";
+        }
+        String trimmed = name.trim();
+        if (trimmed.length() &lt; 2) {
+            return "Name must be at least 2 characters.";
+        }
+        if (trimmed.length() &gt; 50) {
+            return "Name must be at most 50 characters.";
+        }
+        if (!NAME_PATTERN.matcher(trimmed).matches()) {
+            return "Name can only contain letters, spaces, apostrophes, hyphens and dots.";
+        }
+        return null;
+    }
+
+    public static String validateAge(String ageText) {
+        if (ageText == null || ageText.isBlank()) {
+            return "Age is required.";
+        }
+        String trimmed = ageText.trim();
+        if (!trimmed.matches("\\d+")) {
+            return "Age must be a whole number (digits only).";
+        }
+        int age;
+        try {
+            age = Integer.parseInt(trimmed);
+        } catch (NumberFormatException e) {
+            return "Age is too large.";
+        }
+        if (age &lt; MIN_AGE || age &gt; MAX_AGE) {
+            return "Age must be between " + MIN_AGE + " and " + MAX_AGE + ".";
+        }
+        return null;
+    }
+
+    public static String validateEmail(String email) {
+        if (email == null || email.isBlank()) {
+            return "Email is required.";
+        }
+        String trimmed = email.trim();
+        if (trimmed.length() &gt; 254) {
+            return "Email is too long.";
+        }
+        if (trimmed.contains("..")) {
+            return "Email cannot contain two dots in a row.";
+        }
+        if (!EMAIL_PATTERN.matcher(trimmed).matches()) {
+            return "Enter a valid email, e.g. name@example.com.";
+        }
+        return null;
+    }
+}</code></pre></div>
+          </div>
+        </details>
+      </section>
+
+      <section id="view">
+        <h2><span class="n">05</span>Design the View</h2>
+        <ol>
+          <li>Right-click <code>view › New › Other › JavaFX › Empty FXML</code> and name it <code>UserForm</code>.</li>
+          <li>Right-click <code>UserForm.fxml › Open</code>. It opens in Scene Builder.</li>
+          <li>Drag in a <em>VBox</em>, then a <em>Label</em> for the title, a <em>GridPane</em> with Labels and TextFields for Name, Age and Email, a small error Label under each field, and an <em>HBox</em> holding Clear and Submit buttons.</li>
+          <li>Select each TextField. In the <strong>Code</strong> panel on the right, set its <em>fx:id</em>: <code>nameField</code>, <code>ageField</code>, <code>emailField</code>. Name the error labels <code>nameError</code>, <code>ageError</code>, <code>emailError</code>.</li>
+          <li>Select Submit and set <em>On Action</em> to <code>handleSubmit</code>. Set Clear's to <code>handleClear</code>.</li>
+          <li>In the left <strong>Controller</strong> panel, set the controller class to <code>controller.UserFormController</code>. Save.</li>
+        </ol>
+        <p>Or paste the finished FXML below. Scene Builder opens it the same way, and you can compare it with what you built.</p>
+
+        <details>
+          <summary>UserForm.fxml <span class="path">src/view/</span></summary>
+          <div class="inner">
+<div class="code"><div class="bar"><span>UserForm.fxml</span><button class="copy" type="button">Copy</button></div><pre><code>&lt;?xml version="1.0" encoding="UTF-8"?&gt;
+
+&lt;!--
+  VIEW: describes only what the screen looks like.
+  Open this file in Scene Builder to edit it visually.
+  fx:controller links it to the controller class.
+  fx:id values become @FXML fields in the controller.
+  onAction="#handleSubmit" calls the controller's handleSubmit method.
+--&gt;
+
+&lt;?import javafx.geometry.Insets?&gt;
+&lt;?import javafx.scene.control.Button?&gt;
+&lt;?import javafx.scene.control.Label?&gt;
+&lt;?import javafx.scene.control.TextField?&gt;
+&lt;?import javafx.scene.layout.ColumnConstraints?&gt;
+&lt;?import javafx.scene.layout.GridPane?&gt;
+&lt;?import javafx.scene.layout.HBox?&gt;
+&lt;?import javafx.scene.layout.VBox?&gt;
+
+&lt;VBox spacing="16.0" prefWidth="460.0" stylesheets="@style.css"
+      xmlns="http://javafx.com/javafx/27" xmlns:fx="http://javafx.com/fxml/1"
+      fx:controller="controller.UserFormController"&gt;
+   &lt;padding&gt;
+      &lt;Insets top="24.0" right="24.0" bottom="24.0" left="24.0" /&gt;
+   &lt;/padding&gt;
+   &lt;children&gt;
+      &lt;Label styleClass="title" text="User Registration" /&gt;
+
+      &lt;GridPane hgap="12.0" vgap="4.0"&gt;
+         &lt;columnConstraints&gt;
+            &lt;ColumnConstraints minWidth="70.0" /&gt;
+            &lt;ColumnConstraints hgrow="ALWAYS" /&gt;
+         &lt;/columnConstraints&gt;
+         &lt;children&gt;
+            &lt;Label text="Name" GridPane.rowIndex="0" /&gt;
+            &lt;TextField fx:id="nameField" promptText="e.g. Jane Doe" GridPane.columnIndex="1" GridPane.rowIndex="0" /&gt;
+            &lt;Label fx:id="nameError" styleClass="error-text" GridPane.columnIndex="1" GridPane.rowIndex="1" /&gt;
+
+            &lt;Label text="Age" GridPane.rowIndex="2" /&gt;
+            &lt;TextField fx:id="ageField" promptText="1 to 120" GridPane.columnIndex="1" GridPane.rowIndex="2" /&gt;
+            &lt;Label fx:id="ageError" styleClass="error-text" GridPane.columnIndex="1" GridPane.rowIndex="3" /&gt;
+
+            &lt;Label text="Email" GridPane.rowIndex="4" /&gt;
+            &lt;TextField fx:id="emailField" promptText="e.g. jane@example.com" GridPane.columnIndex="1" GridPane.rowIndex="4" /&gt;
+            &lt;Label fx:id="emailError" styleClass="error-text" GridPane.columnIndex="1" GridPane.rowIndex="5" /&gt;
+         &lt;/children&gt;
+      &lt;/GridPane&gt;
+
+      &lt;HBox alignment="CENTER_RIGHT" spacing="10.0"&gt;
+         &lt;children&gt;
+            &lt;Button onAction="#handleClear" text="Clear" /&gt;
+            &lt;Button fx:id="submitButton" defaultButton="true" onAction="#handleSubmit" text="Submit" /&gt;
+         &lt;/children&gt;
+      &lt;/HBox&gt;
+   &lt;/children&gt;
+&lt;/VBox&gt;</code></pre></div>
+          </div>
+        </details>
+
+        <details>
+          <summary>style.css <span class="path">src/view/</span></summary>
+          <div class="inner">
+            <p>Create it with <code>view › New › Other › Other › Cascading Style Sheet</code>. The <code>invalid</code> class gives a field its red border.</p>
+<div class="code"><div class="bar"><span>style.css</span><button class="copy" type="button">Copy</button></div><pre><code>.title {
+    -fx-font-size: 20px;
+    -fx-font-weight: bold;
+}
+
+.error-text {
+    -fx-text-fill: #c62828;
+    -fx-font-size: 11px;
+}
+
+/* Added to a TextField by the controller when its value is invalid */
+.text-field.invalid {
+    -fx-border-color: #c62828;
+    -fx-border-radius: 3px;
+}</code></pre></div>
+          </div>
+        </details>
+      </section>
+
+      <section id="controller">
+        <h2><span class="n">06</span>Write the Controller</h2>
+        <p>Points to explain while writing this file:</p>
+        <ul>
+          <li><code>@FXML</code> fields are filled in automatically. Their names must match the <code>fx:id</code> values exactly.</li>
+          <li><code>initialize()</code> runs once after loading. It sets up live re-checking and stops letters from being typed into Age.</li>
+          <li><code>validateName() &amp; validateAge() &amp; validateEmail()</code> uses a single <code>&amp;</code> so all three checks run and every error shows at once. With <code>&amp;&amp;</code>, Java would stop at the first failure.</li>
+          <li><code>showAndWait()</code> pauses until the pop-up is closed, so <code>handleClear()</code> runs only after the user clicks OK.</li>
+        </ul>
+
+        <details>
+          <summary>UserFormController.java <span class="path">src/controller/</span></summary>
+          <div class="inner">
+<div class="code"><div class="bar"><span>UserFormController.java</span><button class="copy" type="button">Copy</button></div><pre><code>package controller;
+
+import javafx.fxml.FXML;
+import javafx.scene.control.Alert;
+import javafx.scene.control.Label;
+import javafx.scene.control.TextField;
+import model.User;
+import model.UserValidator;
+
+/**
+ * CONTROLLER: the middleman between the View (UserForm.fxml) and the Model.
+ * 1. Reads what the user typed from the View.
+ * 2. Asks the Model (UserValidator) whether it is valid.
+ * 3. Either shows the errors, or builds a User and shows it in a pop-up.
+ */
+public class UserFormController {
+
+    // Each @FXML field matches an fx:id in UserForm.fxml; FXMLLoader fills them in.
+    @FXML private TextField nameField;
+    @FXML private TextField ageField;
+    @FXML private TextField emailField;
+    @FXML private Label nameError;
+    @FXML private Label ageError;
+    @FXML private Label emailError;
+
+    /** Called automatically by FXMLLoader after the @FXML fields are set. */
+    @FXML
+    private void initialize() {
+        // Live validation: re-check a field every time its text changes,
+        // but only after the user has already seen an error for it.
+        nameField.textProperty().addListener((obs, oldV, newV) -&gt; {
+            if (!nameError.getText().isEmpty()) validateName();
+        });
+        ageField.textProperty().addListener((obs, oldV, newV) -&gt; {
+            if (!ageError.getText().isEmpty()) validateAge();
+        });
+        emailField.textProperty().addListener((obs, oldV, newV) -&gt; {
+            if (!emailError.getText().isEmpty()) validateEmail();
+        });
+
+        // Block anything other than digits being typed into Age (max 3 digits).
+        ageField.setTextFormatter(new javafx.scene.control.TextFormatter&lt;String&gt;(change -&gt;
+                change.getControlNewText().matches("\\d{0,3}") ? change : null));
+    }
+
+    /** Runs when Submit is clicked (onAction="#handleSubmit" in the FXML). */
+    @FXML
+    private void handleSubmit() {
+        // Use &amp; (not &amp;&amp;) so every field is checked and every error is shown at once.
+        boolean valid = validateName() &amp; validateAge() &amp; validateEmail();
+
+        if (!valid) {
+            showAlert(Alert.AlertType.ERROR, "Invalid Input",
+                    "Please fix the highlighted fields.", collectErrors());
+            return;
+        }
+
+        User user = new User(
+                nameField.getText().trim(),
+                Integer.parseInt(ageField.getText().trim()),
+                emailField.getText().trim());
+
+        showAlert(Alert.AlertType.INFORMATION, "Details Submitted",
+                "Thank you! Here are the details you entered:", user.toString());
+
+        // showAndWait() above blocks until the pop-up is closed, then the form is reset.
+        handleClear();
+    }
+
+    /** Runs when Clear is clicked. */
+    @FXML
+    private void handleClear() {
+        nameField.clear();
+        ageField.clear();
+        emailField.clear();
+        setError(nameField, nameError, null);
+        setError(ageField, ageError, null);
+        setError(emailField, emailError, null);
+        nameField.requestFocus();
+    }
+
+    private boolean validateName() {
+        return setError(nameField, nameError, UserValidator.validateName(nameField.getText()));
+    }
+
+    private boolean validateAge() {
+        return setError(ageField, ageError, UserValidator.validateAge(ageField.getText()));
+    }
+
+    private boolean validateEmail() {
+        return setError(emailField, emailError, UserValidator.validateEmail(emailField.getText()));
+    }
+
+    /** Shows or hides the error under a field and the red border. Returns true when valid. */
+    private boolean setError(TextField field, Label errorLabel, String message) {
+        if (message == null) {
+            errorLabel.setText("");
+            field.getStyleClass().remove("invalid");
+            return true;
+        }
+        errorLabel.setText(message);
+        if (!field.getStyleClass().contains("invalid")) {
+            field.getStyleClass().add("invalid");
+        }
+        return false;
+    }
+
+    private String collectErrors() {
+        StringBuilder sb = new StringBuilder();
+        for (Label l : new Label[] {nameError, ageError, emailError}) {
+            if (!l.getText().isEmpty()) {
+                sb.append("\u2022 ").append(l.getText()).append("\n");
+            }
+        }
+        return sb.toString().trim();
+    }
+
+    private void showAlert(Alert.AlertType type, String title, String header, String content) {
+        Alert alert = new Alert(type);
+        alert.setTitle(title);
+        alert.setHeaderText(header);
+        alert.setContentText(content);
+        alert.showAndWait();
+    }
+}</code></pre></div>
+          </div>
+        </details>
+      </section>
+
+      <section id="main">
+        <h2><span class="n">07</span>Start the app</h2>
+        <p><code>Main</code> extends <code>Application</code>. Its only job is to load the FXML and show the window. When <code>FXMLLoader</code> reads <code>fx:controller</code>, it creates the Controller and connects it to the View.</p>
+        <details open>
+          <summary>Main.java <span class="path">src/app/</span></summary>
+          <div class="inner">
+<div class="code"><div class="bar"><span>Main.java</span><button class="copy" type="button">Copy</button></div><pre><code>package app;
+
+import javafx.application.Application;
+import javafx.fxml.FXMLLoader;
+import javafx.scene.Parent;
+import javafx.scene.Scene;
+import javafx.stage.Stage;
+
+/**
+ * Entry point. Loads the View (FXML); FXMLLoader creates the Controller
+ * named in fx:controller and connects them.
+ */
+public class Main extends Application {
+
+    @Override
+    public void start(Stage stage) throws Exception {
+        Parent root = FXMLLoader.load(getClass().getResource("/view/UserForm.fxml"));
+        stage.setTitle("Lab 5 - User Registration (MVC)");
+        stage.setScene(new Scene(root));
+        stage.setResizable(false);
+        stage.show();
+    }
+
+    public static void main(String[] args) {
+        launch(args);
+    }
+}</code></pre></div>
+          </div>
+        </details>
+        <div class="note"><strong>The leading slash</strong><code>"/view/UserForm.fxml"</code> means "start from the top of <code>src</code>". Without the slash, Java looks inside the <code>app</code> package and returns <code>null</code>.</div>
+      </section>
+
+      <section id="run">
+        <h2><span class="n">08</span>Configure and run</h2>
+        <p>Right-click the project and choose <em>Properties</em>.</p>
+        <ol>
+          <li><strong>Libraries › Classpath › + › Add JAR/Folder.</strong> Select every <code>.jar</code> in the JavaFX SDK's <code>lib</code> folder. (Or create a reusable library once in <em>Tools › Libraries › New Library</em> and add that.)</li>
+          <li><strong>Run › Main Class:</strong> <code>app.Main</code></li>
+          <li><strong>Run › VM Options:</strong> paste this line and change the path to your own <code>lib</code> folder:</li>
+        </ol>
+<div class="code"><div class="bar"><span>VM Options</span><button class="copy" type="button">Copy</button></div><pre><code>--module-path "C:\Users\&lt;you&gt;\Java\openjfx-27_windows-x64_bin-sdk\javafx-sdk-27\lib" --add-modules javafx.controls,javafx.fxml --enable-native-access=javafx.graphics</code></pre></div>
+        <p>Click OK, then press <kbd>F6</kbd>.</p>
+        <div class="tbl">
+          <table>
+            <thead><tr><th>Setting</th><th>Used when</th><th>If it's missing</th></tr></thead>
+            <tbody>
+              <tr><td>Libraries (classpath)</td><td>Compiling</td><td><code>import javafx…</code> lines turn red</td></tr>
+              <tr><td>VM Options (module path)</td><td>Running</td><td>"JavaFX runtime components are missing"</td></tr>
+              <tr><td><code>--enable-native-access</code></td><td>Running on JDK 24+</td><td>A harmless warning in the output</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section id="test">
+        <h2><span class="n">09</span>Test the validation</h2>
+        <p>Type each input and click Submit. These are the results the finished app gives.</p>
+        <div class="tbl">
+          <table>
+            <thead><tr><th>Field</th><th>Input</th><th>Result</th></tr></thead>
+            <tbody>
+              <tr><td>Name</td><td><em>(empty)</em></td><td class="no">Name is required.</td></tr>
+              <tr><td>Name</td><td><code>J</code></td><td class="no">At least 2 characters</td></tr>
+              <tr><td>Name</td><td><code>Jane123</code></td><td class="no">Letters only</td></tr>
+              <tr><td>Name</td><td><code>Mary-Jane O'Neil</code></td><td class="ok">Valid</td></tr>
+              <tr><td>Age</td><td><code>abc</code></td><td>Can't be typed (blocked)</td></tr>
+              <tr><td>Age</td><td><code>0</code> or <code>121</code></td><td class="no">Between 1 and 120</td></tr>
+              <tr><td>Age</td><td><code>25</code></td><td class="ok">Valid</td></tr>
+              <tr><td>Email</td><td><code>jane</code> or <code>jane@x</code></td><td class="no">Enter a valid email</td></tr>
+              <tr><td>Email</td><td><code>a..b@x.com</code></td><td class="no">No two dots in a row</td></tr>
+              <tr><td>Email</td><td><code>jane@mail.co.uk</code></td><td class="ok">Valid</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>With all three valid, an information pop-up shows the details, and the form clears after you click OK.</p>
+      </section>
+
+      <section id="errors">
+        <h2><span class="n">10</span>Common errors</h2>
+        <div class="tbl">
+          <table>
+            <thead><tr><th>You see</th><th>Cause</th><th>Fix</th></tr></thead>
+            <tbody>
+              <tr><td>JavaFX runtime components are missing</td><td>No VM Options</td><td>Add the <code>--module-path</code> line from step 08</td></tr>
+              <tr><td><code>package javafx.… does not exist</code></td><td>JavaFX jars not in Libraries</td><td>Add the jars from the SDK <code>lib</code> folder</td></tr>
+              <tr><td><code>Location is not set</code></td><td><code>getResource</code> returned null</td><td>Check the FXML path, its leading <code>/</code>, and the file name's capitals</td></tr>
+              <tr><td><code>NullPointerException</code> on a field</td><td>An <code>fx:id</code> doesn't match the <code>@FXML</code> name</td><td>Make them identical, including case</td></tr>
+              <tr><td>ClassNotFoundException: controller…</td><td>Wrong <code>fx:controller</code></td><td>Use the full name, <code>controller.UserFormController</code></td></tr>
+              <tr><td>FXML opens as text, not in Scene Builder</td><td>Scene Builder Home not set</td><td><em>Tools › Options › Java › JavaFX</em></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section id="practice">
+        <h2><span class="n">11</span>Practice</h2>
+        <p>Add a <strong>Phone</strong> field. It touches every part of MVC, which makes it a good check that the pattern made sense:</p>
+        <ol>
+          <li><strong>Model:</strong> add <code>phone</code> to <code>User</code> and a <code>validatePhone</code> method to <code>UserValidator</code> (for example, exactly 10 digits).</li>
+          <li><strong>View:</strong> in Scene Builder, add a Label, a TextField with <code>fx:id="phoneField"</code>, and an error Label <code>phoneError</code>.</li>
+          <li><strong>Controller:</strong> add the two <code>@FXML</code> fields, a <code>validatePhone()</code> helper, and include it in <code>handleSubmit</code>, <code>handleClear</code> and <code>collectErrors</code>.</li>
+        </ol>
+      </section>
+
+      <footer>Lab 5 study guide · Write the code yourself to learn it. Copying classmates' submissions can break your course's academic integrity rules.</footer>
+    </main>
+  </div>
+</div>
+
+<script>
+document.querySelectorAll('.copy').forEach(function (btn) {
+  btn.addEventListener('click', function () {
+    var code = btn.closest('.code').querySelector('pre');
+    var text = code.innerText;
+    function done(msg) { btn.textContent = msg; setTimeout(function () { btn.textContent = 'Copy'; }, 1600); }
+    function fallback() {
+      var r = document.createRange(); r.selectNodeContents(code);
+      var s = window.getSelection(); s.removeAllRanges(); s.addRange(r);
+      done('Press Ctrl+C');
+    }
+    try {
+      navigator.clipboard.writeText(text).then(function () { done('Copied'); }, fallback);
+    } catch (e) { fallback(); }
+  });
+});
+document.querySelectorAll('.check input').forEach(function (box) {
+  try { box.checked = localStorage.getItem('lab5-' + box.id) === '1'; } catch (e) {}
+  box.addEventListener('change', function () {
+    try { localStorage.setItem('lab5-' + box.id, box.checked ? '1' : '0'); } catch (e) {}
+  });
+});
+</script>
